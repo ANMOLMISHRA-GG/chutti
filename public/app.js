@@ -311,7 +311,7 @@ function renderShell() {
 
   $('#app-header').innerHTML = `
   <nav class="nav">
-    <a class="logo" href="#/" aria-label="Chutti.com home">${logoPlane}<span><b>chutti<em>.com</em></b></span></a>
+    <a class="logo" href="#/" aria-label="Chutti.com home"><span class="brand-icon">${ic('mountain')}</span><span><b>chutti<em>.</em></b></span></a>
     <div class="nav-links" id="nav-links">
       <a href="#/" data-nav="home">Explore</a>
       <a href="#/destinations" data-nav="destinations">Destinations</a>
@@ -329,10 +329,7 @@ function renderShell() {
   <div class="foot">
     <a class="logo" href="#/">${logoPlane}<span><b>chutti<em>.com</em></b><small>Travel Smarter, Live Better</small></span></a>
     <div class="links"><a href="#/">Home</a><a href="#/destinations">Destinations</a><a href="#/trips">My Trips</a><a href="#/about">About</a><a href="#/contact">Contact</a></div>
-    <div class="soc">
-      <a href="#/about" aria-label="YouTube">${ic('youtube')}</a><a href="#/about" aria-label="Instagram">${ic('insta')}</a>
-      <a href="#/about" aria-label="X">${ic('x')}</a><a href="#/about" aria-label="LinkedIn">${ic('linkedin')}</a>
-    </div>
+
     <div class="script">Your Next Adventure<br>is Just a <em>Click Away!</em></div>
   </div>`;
   $('#theme-btn').onclick = () => {
@@ -366,7 +363,7 @@ const DEST_TEMPS = {
 function home() {
   const saved = store.get('chutti_last', { destination: 'Manali', budget: 15000, when: 'Anytime' });
   const defaultOrigin = USER?.home_city || store.get('chutti_origin', 'Delhi');
-  const featuredOrder = ['manali', 'shimla', 'mathura', 'ladakh', 'goa', 'darjeeling'];
+  const featuredOrder = ['manali', 'goa', 'jaipur', 'kerala'];
   const popularSix = [
     ...featuredOrder.map(s => DESTS.find(d => d.slug === s)).filter(Boolean),
     ...DESTS.filter(d => !featuredOrder.includes(d.slug))
@@ -381,21 +378,17 @@ function home() {
   <section class="hero">
     <div class="hero-bg"></div>
     <div class="wrap hero-inner">
-      <h1>Plan Your Dream Trip<br><span class="hero-accent">Effortlessly.</span></h1>
-      <p class="hero-sub">Tell us where you want to go and your budget...<br>we'll plan the <b>perfect trip</b> with flights, trains, hotels,<br>food and more — all within your budget!</p>
-      <div class="hero-actions">
-        <a class="btn btn-red" id="start-btn" href="#planner">Start Planning ${ic('arrow')}</a>
-        <button class="demo-btn" id="demo-btn" type="button"><span class="play-ring">${ic('play')}</span><span>Watch Demo</span></button>
-      </div>
+      <span class="travel-label"><i></i> THE INDIA TRAVEL PLANNER</span>
+      <h1>Less planning.<br><em>More exploring.</em></h1>
+      <p class="hero-sub">Your budget, your pace. Discover India with a day-by-day<br class="wide-only"> itinerary built around you.</p>
+      <div class="scene-controls"><a id="scene-link" href="#/destination/ladakh">${ic('pin')} <span>Ladakh, India</span></a><button id="scene-next" aria-label="Show next landscape">${ic('arrow')}</button></div>
     </div>
-  </section>
-
-  <section class="wrap search-pill-wrap">
+  <div class="wrap search-pill-wrap">
     <form class="search-pill" id="plan-form" novalidate>
       <div class="sp-seg sp-dest" id="planner">
         <span class="sp-ic">${ic('pin')}</span>
         <div class="sp-body">
-          <label for="dest">Where do you want to go?</label>
+          <label for="dest">Destination</label>
           <input id="dest" list="dest-list" autocomplete="off" value="${esc(saved.destination)}" placeholder="e.g. Manali, Ladakh, Europe...">
           <datalist id="dest-list">${DESTS.map(d => `<option value="${esc(d.name)}"></option>`).join('')}</datalist>
         </div>
@@ -427,22 +420,16 @@ function home() {
     </form>
     <div class="form-err sp-err" id="form-err" role="alert"></div>
 
-    <div class="feature-pills">
-      <div class="feat-pill"><span class="fp-ic">${ic('plane')}</span><div><b>Flights &amp; Trains</b><small>Options</small></div></div>
-      <div class="feat-pill"><span class="fp-ic">${ic('bed')}</span><div><b>Hotels</b><small>Within Budget</small></div></div>
-      <div class="feat-pill"><span class="fp-ic">${ic('food')}</span><div><b>Food &amp; Local Eats</b><small>Suggestions</small></div></div>
-      <div class="feat-pill"><span class="fp-ic">${ic('pin')}</span><div><b>Complete Itinerary</b><small>Day-wise Plan</small></div></div>
-      <div class="feat-pill"><span class="fp-ic">${ic('wallet')}</span><div><b>Total Cost Breakdown</b><small>(No Hidden Charges)</small></div></div>
     </div>
   </section>
 
   <section class="wrap popular">
-    <div class="eyebrow"><span>EXPLORE</span><i></i></div>
+    <div class="edit-label">THE DESTINATION EDIT</div>
     <div class="sec-head">
-      <h2>Popular Destinations</h2>
-      <a class="view-all-link" href="#/destinations">View All Destinations ${ic('arrow')}</a>
+      <h2>Find your next escape<span>.</span></h2>
+      <a class="view-all-link" href="#/destinations">All destinations ${ic('arrow')}</a>
     </div>
-    <div class="grid grid-6">${popularSix.map(dcard).join('')}</div>
+    <div class="escape-grid">${popularSix.slice(0, 4).map(d => `<a class="escape-card" href="#/destination/${esc(d.slug)}"><img src="${img(d.slug)}" alt="" decoding="async"><span class="category-tag">${esc(d.category || 'Explore')}</span><div class="escape-caption"><div><small>${esc(d.state)}</small><h3>${esc(d.name)}</h3></div><span class="round-arrow">${ic('arrow')}</span></div></a>`).join('')}</div>
   </section>
 
   <section class="wrap showcase-sec">
@@ -454,7 +441,7 @@ function home() {
           <div>
             <div class="bento-meta-pills">
               <span class="bm-pill">${ic('pin')} <span id="sc-loc">${esc(initialDestObj.name)}, ${esc(initialDestObj.state || 'India')}</span></span>
-              <span class="bm-pill">${ic('cloud')} <span id="sc-temp">${initTemp}</span></span>
+
             </div>
             <div class="bento-script" id="sc-cap">${esc(initialDestObj.name)}</div>
             <div class="bento-sub-cap">Because you deserve a break!</div>
@@ -488,7 +475,7 @@ function home() {
 
       <div class="bento-card bento-price">
         <div class="bp-top">
-          <span class="bp-kicker">Starting from</span>
+          <span class="bp-kicker">Estimated trip cost</span>
           <div class="bp-amt"><b id="sc-tot">₹ 14,800</b><span>/person</span></div>
           <small class="bp-days" id="sc-days">(for 4 Days / 3 Nights)</small>
           <span class="pill ok" id="sc-fit" style="margin-top:10px">Within Budget ${ic('check')}</span>
@@ -500,7 +487,7 @@ function home() {
             <span style="background:linear-gradient(135deg,#3b82f6,#6366f1)">R</span>
             <span style="background:linear-gradient(135deg,#10b981,#0d9488)">P</span>
           </div>
-          <span>Powered by CodeFusionAI</span>
+          <span>Planning estimate, not a live quote</span>
         </div>
       </div>
     </div>
@@ -523,7 +510,10 @@ function home() {
 
   const budget = $('#budget'), dest = $('#dest'), when = $('#when'), err = $('#form-err');
   when.value = saved.when || 'Anytime';
-  const readBudget = () => parseInt(String(budget.value).replace(/[^0-9]/g, ''), 10) || 0;
+  const readBudget = () => {
+    const amount = budget.value.trim().replace(/^₹\s*/, '').replaceAll(',', '');
+    return /^\d+$/.test(amount) ? Number(amount) : 0;
+  };
   budget.addEventListener('input', () => refresh());
   budget.addEventListener('blur', () => { const v = readBudget(); if (v) budget.value = v; });
   dest.addEventListener('input', () => refresh());
@@ -544,7 +534,7 @@ function home() {
       $('#sc-cap').textContent = e.destination;
       $('#sc-heading').textContent = e.destination;
       $('#sc-loc').textContent = meta.state ? `${e.destination}, ${meta.state}` : e.destination;
-      $('#sc-temp').textContent = DEST_TEMPS[e.slug] || '20°C';
+
       $('#sc-desc').textContent = meta.blurb ? meta.blurb.split('.')[0] + '.' : `${meta.tagline || 'Handpicked stays, local food and curated day-by-day plans.'}`;
       $('#sc-tot').textContent = inr(e.total).replace('₹', '₹ ');
       $('#sc-days').textContent = `(for ${e.days} Days / ${e.nights} ${e.nights === 1 ? 'Night' : 'Nights'})`;
@@ -562,20 +552,22 @@ function home() {
     err.textContent = '';
     if (!d) { err.textContent = 'Please enter a destination.'; dest.focus(); return; }
     if (b < 1000) { err.textContent = 'Budget must be at least ₹1,000.'; budget.focus(); return; }
+    if (b > 10000000) { err.textContent = 'Enter a budget of ₹1 crore or less.'; budget.focus(); return; }
     store.set('chutti_last', { destination: d, budget: b, when: w });
     location.hash = planHash({ destination: d, budget: b, origin: from, when: w });
   };
   $('#plan-form').addEventListener('submit', e => { e.preventDefault(); go(); });
   $('#sc-open').addEventListener('click', go);
   $('#sc-play').addEventListener('click', go);
-  $('#start-btn').addEventListener('click', e => {
-    e.preventDefault();
-    $('#plan-form').scrollIntoView({ behavior: 'smooth', block: 'center' });
-    setTimeout(() => dest.focus({ preventScroll: true }), 350);
-  });
-  $('#demo-btn').addEventListener('click', () => {
-    openDemoModal(defaultOrigin || 'Delhi');
-  });
+  const scenes = ['ladakh', 'munnar', 'kashmir'];
+  let sceneIndex = 0;
+  $('#scene-next').onclick = () => {
+    sceneIndex = (sceneIndex + 1) % scenes.length;
+    const slug = scenes[sceneIndex];
+    $('.hero-bg').style.backgroundImage = `url('${img(slug)}')`;
+    $('#scene-link').href = `#/destination/${slug}`;
+    $('#scene-link span').textContent = `${bySlug(slug)?.name || slug}, India`;
+  };
   $$('[data-quick]').forEach(btn => btn.addEventListener('click', () => {
     const qName = btn.dataset.quick;
     const qSlug = btn.dataset.slug || slugFor(qName);
@@ -1368,7 +1360,7 @@ function route() {
   const parts = path.split('/').filter(Boolean);
   const qs = new URLSearchParams(q || '');
   planToken++;
-  document.title = 'Chutti.com | You give the budget. We plan the entire journey.';
+  document.title = 'Chutti — The India Travel Planner';
   const page = parts[0] || 'home';
   document.body.classList.toggle('is-home', page === 'home' || !['destinations', 'destination', 'plan', 'trips', 'about', 'contact', 'login', 'signup'].includes(page));
   $$('#nav-links a').forEach(a => a.classList.toggle('active', a.dataset.nav === (page === 'destination' ? 'destinations' : page === 'plan' ? '' : page)));
