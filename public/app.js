@@ -320,9 +320,9 @@ function renderShell() {
 
   $('#app-header').innerHTML = `
   <nav class="nav">
-    <a class="logo" href="#/" aria-label="Chutti.com home"><span class="brand-icon">${ic('mountain')}</span><span><b>chutti<em>.</em></b></span></a>
+    <a class="logo" href="#/" aria-label="Chutti.com home"><span class="brand-icon">${ic('mountain')}</span><span class="inner-wordmark"><b>chutti<em>.</em></b></span><span class="home-wordmark"><b>TripPlanner</b></span></a>
     <div class="nav-links" id="nav-links">
-      <a href="#/" data-nav="home">Explore</a>
+      <a href="#/" data-nav="home">Explore</a><button class="home-plan-link" type="button" onclick="document.getElementById('start-btn')?.click()">Plan</button>
       <a href="#/destinations" data-nav="destinations">Destinations</a>
       <a href="#/trips" data-nav="trips">My Trips</a>
       <a href="#/about" data-nav="about">About</a>
@@ -372,7 +372,7 @@ const DEST_TEMPS = {
 function home() {
   const saved = store.get('chutti_last', { destination: 'Manali', budget: 15000, when: 'Anytime' });
   const defaultOrigin = USER?.home_city || store.get('chutti_origin', 'Delhi');
-  const featuredOrder = ['manali', 'goa', 'jaipur', 'kerala'];
+  const featuredOrder = ['manali', 'shimla', 'mathura', 'ladakh', 'goa', 'darjeeling'];
   const popularSix = [
     ...featuredOrder.map(s => DESTS.find(d => d.slug === s)).filter(Boolean),
     ...DESTS.filter(d => !featuredOrder.includes(d.slug))
@@ -387,17 +387,17 @@ function home() {
   <section class="hero">
     <div class="hero-bg"></div>
     <div class="wrap hero-inner">
-      <span class="travel-label"><i></i> THE INDIA TRAVEL PLANNER</span>
-      <h1>Less planning.<br><em>More exploring.</em></h1>
-      <p class="hero-sub">Your budget, your pace. Discover India with a day-by-day<br class="wide-only"> itinerary built around you.</p>
-      <div class="scene-controls"><a id="scene-link" href="#/destination/ladakh">${ic('pin')} <span>Ladakh, India</span></a><button id="scene-next" aria-label="Show next landscape">${ic('arrow')}</button></div>
+      <h1>Plan Your Dream Trip<br><span class="hero-accent">Effortlessly.</span></h1>
+      <p class="hero-sub">Tell us where you want to go and your budget...<br>we’ll plan the <b>perfect trip</b> with flights, trains, hotels,<br>food and more — all within your budget!</p>
+      <div class="hero-actions"><button class="btn btn-red" id="start-btn">Start Planning ${ic('arrow')}</button><button class="demo-btn" id="demo-btn"><span class="play-ring">${ic('play')}</span>Watch Demo</button></div>
     </div>
-  <div class="wrap search-pill-wrap">
+  </section>
+  <section class="wrap search-pill-wrap" aria-label="Trip planner">
     <form class="search-pill" id="plan-form" novalidate>
       <div class="sp-seg sp-dest" id="planner">
         <span class="sp-ic">${ic('pin')}</span>
         <div class="sp-body">
-          <label for="dest">Destination</label>
+          <label for="dest">Where do you want to go?</label>
           <input id="dest" list="dest-list" autocomplete="off" value="${esc(saved.destination)}" placeholder="e.g. Manali, Ladakh, Europe...">
           <datalist id="dest-list">${DESTS.map(d => `<option value="${esc(d.name)}"></option>`).join('')}</datalist>
         </div>
@@ -428,17 +428,13 @@ function home() {
       <button class="btn btn-red sp-submit" id="go" type="submit">Plan My Trip ${ic('arrow')}</button>
     </form>
     <div class="form-err sp-err" id="form-err" role="alert"></div>
-
-    </div>
+    <div class="feature-pills">${[['plane','Flights &amp; Trains','Options'],['bed','Hotels','Within Budget'],['food','Food &amp; Local Eats','Suggestions'],['pin','Complete Itinerary','Day-wise Plan'],['wallet','Total Cost Breakdown','(No Hidden Charges)']].map(([icon,title,detail]) => `<div class="feat-pill"><span class="fp-ic">${ic(icon)}</span><div><b>${title}</b><small>${detail}</small></div></div>`).join('')}</div>
   </section>
 
   <section class="wrap popular">
-    <div class="edit-label">THE DESTINATION EDIT</div>
-    <div class="sec-head">
-      <h2>Find your next escape<span>.</span></h2>
-      <a class="view-all-link" href="#/destinations">All destinations ${ic('arrow')}</a>
-    </div>
-    <div class="escape-grid">${popularSix.slice(0, 4).map(d => `<a class="escape-card" href="#/destination/${esc(d.slug)}"><img src="${img(d.slug)}" alt="" decoding="async"><span class="category-tag">${esc(d.category || 'Explore')}</span><div class="escape-caption"><div><small>${esc(d.state)}</small><h3>${esc(d.name)}</h3></div><span class="round-arrow">${ic('arrow')}</span></div></a>`).join('')}</div>
+    <div class="eyebrow"><span>EXPLORE</span><i></i></div>
+    <div class="sec-head"><h2>Popular Destinations</h2><a class="view-all-link" href="#/destinations">View All Destinations ${ic('arrow')}</a></div>
+    <div class="grid grid-6">${popularSix.map(dcard).join('')}</div>
   </section>
 
   <section class="wrap showcase-sec">
@@ -484,7 +480,7 @@ function home() {
 
       <div class="bento-card bento-price">
         <div class="bp-top">
-          <span class="bp-kicker">Estimated trip cost</span>
+          <span class="bp-kicker">Starting from</span>
           <div class="bp-amt"><b id="sc-tot">₹ 14,800</b><span>/person</span></div>
           <small class="bp-days" id="sc-days">(for 4 Days / 3 Nights)</small>
           <span class="pill ok" id="sc-fit" style="margin-top:10px">Within Budget ${ic('check')}</span>
@@ -568,15 +564,11 @@ function home() {
   $('#plan-form').addEventListener('submit', e => { e.preventDefault(); go(); });
   $('#sc-open').addEventListener('click', go);
   $('#sc-play').addEventListener('click', go);
-  const scenes = ['ladakh', 'munnar', 'kashmir'];
-  let sceneIndex = 0;
-  $('#scene-next').onclick = () => {
-    sceneIndex = (sceneIndex + 1) % scenes.length;
-    const slug = scenes[sceneIndex];
-    $('.hero-bg').style.backgroundImage = `url('${img(slug)}')`;
-    $('#scene-link').href = `#/destination/${slug}`;
-    $('#scene-link span').textContent = `${bySlug(slug)?.name || slug}, India`;
+  $('#start-btn').onclick = () => {
+    dest.focus({ preventScroll: true });
+    $('#plan-form').scrollIntoView({ block: 'center', behavior: 'smooth' });
   };
+  $('#demo-btn').onclick = () => openDemoModal(defaultOrigin);
   $$('[data-quick]').forEach(btn => btn.addEventListener('click', () => {
     const qName = btn.dataset.quick;
     const qSlug = btn.dataset.slug || slugFor(qName);
