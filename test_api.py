@@ -196,6 +196,34 @@ class ChuttiBackendTests(unittest.TestCase):
             self.assertTrue(p["withinBudget"])
             self.assertEqual(len(p["itinerary"]), 4)
 
+    def test_images_and_static_assets(self):
+        # Hero images (both with and without extension)
+        r_hero = self.client.get("/img/hero")
+        self.assertEqual(r_hero.status_code, 200)
+        self.assertEqual(r_hero.headers.get("content-type"), "image/jpeg")
+
+        r_hero_jpg = self.client.get("/img/hero.jpg")
+        self.assertEqual(r_hero_jpg.status_code, 200)
+        self.assertEqual(r_hero_jpg.headers.get("content-type"), "image/jpeg")
+
+        # Destination images
+        r_dest = self.client.get("/img/dest/manali.jpg")
+        self.assertEqual(r_dest.status_code, 200)
+        self.assertEqual(r_dest.headers.get("content-type"), "image/jpeg")
+
+        r_dest_noext = self.client.get("/img/dest/manali")
+        self.assertEqual(r_dest_noext.status_code, 200)
+        self.assertEqual(r_dest_noext.headers.get("content-type"), "image/jpeg")
+
+        r_gen = self.client.get("/img/dest/generic.jpg")
+        self.assertEqual(r_gen.status_code, 200)
+        self.assertEqual(r_gen.headers.get("content-type"), "image/jpeg")
+
+        # Static JSON
+        r_json = self.client.get("/destinations.json")
+        self.assertEqual(r_json.status_code, 200)
+        self.assertEqual(len(r_json.json()["destinations"]), 30)
+
 
 if __name__ == "__main__":
     unittest.main()

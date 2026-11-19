@@ -253,7 +253,7 @@ body:not(.is-home) #app-header{
 /* ---------- hero ---------- */
 .hero{position:relative;height:575px;overflow:hidden;background:#e6e8f2}
 :root[data-theme="dark"] .hero{background:#0a0f1d}
-.hero-bg{position:absolute;inset:0;background:url('/img/hero') right center/cover no-repeat;transform:scale(1.02)}
+.hero-bg{position:absolute;inset:0;background:url('/img/hero.jpg') right center/cover no-repeat;transform:scale(1.02)}
 .hero::before{
   content:"";position:absolute;inset:0;z-index:1;
   background:

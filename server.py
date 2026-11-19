@@ -486,11 +486,15 @@ def _serve_image(base_path: Path, svg_fallback) -> Response:
     for ext, mime in ((".jpg", "image/jpeg"), (".jpeg", "image/jpeg"), (".png", "image/png"), (".webp", "image/webp")):
         candidate = Path(str(base_path) + ext)
         if candidate.is_file():
-            return FileResponse(candidate, media_type=mime, headers={"Cache-Control": "public, max-age=300, must-revalidate"})
+            return FileResponse(candidate, media_type=mime, headers={"Cache-Control": "public, max-age=31536000, immutable"})
+    if base_path.is_file():
+        mime = "image/jpeg" if base_path.suffix.lower() in (".jpg", ".jpeg") else "image/png"
+        return FileResponse(base_path, media_type=mime, headers={"Cache-Control": "public, max-age=31536000, immutable"})
     return Response(content=svg_fallback(), media_type="image/svg+xml", headers={"Cache-Control": "no-store"})
 
 
 @app.get("/img/hero")
+@app.get("/img/hero.jpg")
 def serve_hero():
     return _serve_image(PUBLIC_DIR / "img" / "hero", hero_svg)
 
@@ -503,6 +507,14 @@ def serve_dest_img(slug: str):
     d = find_dest(clean_slug) or find_dest(clean_slug.replace("-", " "))
     resolved = d["slug"] if d else clean_slug
     return _serve_image(PUBLIC_DIR / "img" / "dest" / resolved, lambda: scene_svg(resolved))
+
+
+@app.get("/destinations.json")
+def serve_destinations_json():
+    target = PUBLIC_DIR / "destinations.json"
+    if target.is_file():
+        return FileResponse(target, media_type="application/json", headers={"Cache-Control": "public, max-age=3600"})
+    return JSONResponse({"destinations": DESTINATIONS})
 
 
 @app.get("/robots.txt", response_class=PlainTextResponse)

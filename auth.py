@@ -13,7 +13,11 @@ from database import get_user_by_id
 # Keep a deterministic fallback secret in dev if JWT_SECRET is not provided in .env,
 # stored in data/.jwt_secret so restarts don't invalidate active logins.
 _BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-_SECRET_FILE = os.path.join(_BASE_DIR, "data", ".jwt_secret")
+if os.environ.get("VERCEL"):
+    _DATA_DIR = "/tmp/data"
+else:
+    _DATA_DIR = os.path.join(_BASE_DIR, "data")
+_SECRET_FILE = os.path.join(_DATA_DIR, ".jwt_secret")
 _CACHED_SECRET: str | None = None
 
 
@@ -24,18 +28,23 @@ def _jwt_secret() -> str:
         return env_secret
     if _CACHED_SECRET:
         return _CACHED_SECRET
-    os.makedirs(os.path.dirname(_SECRET_FILE), exist_ok=True)
-    if os.path.exists(_SECRET_FILE):
-        with open(_SECRET_FILE, "r", encoding="utf-8") as fh:
-            s = fh.read().strip()
-            if s:
-                _CACHED_SECRET = s
-                return s
-    s = secrets.token_hex(32)
-    with open(_SECRET_FILE, "w", encoding="utf-8") as fh:
-        fh.write(s)
-    _CACHED_SECRET = s
-    return s
+    try:
+        os.makedirs(os.path.dirname(_SECRET_FILE), exist_ok=True)
+        if os.path.exists(_SECRET_FILE):
+            with open(_SECRET_FILE, "r", encoding="utf-8") as fh:
+                s = fh.read().strip()
+                if s:
+                    _CACHED_SECRET = s
+                    return s
+        s = secrets.token_hex(32)
+        with open(_SECRET_FILE, "w", encoding="utf-8") as fh:
+            fh.write(s)
+        _CACHED_SECRET = s
+        return s
+    except OSError:
+        if not _CACHED_SECRET:
+            _CACHED_SECRET = secrets.token_hex(32)
+        return _CACHED_SECRET
 
 
 def hash_password(password: str) -> str:

@@ -1,6 +1,16 @@
 (() => {
 'use strict';
 
+// Global image error handler: if any image fails to load, gracefully fallback to hero photo
+window.addEventListener('error', e => {
+  if (e.target && e.target.tagName === 'IMG' && !e.target.dataset.failed) {
+    e.target.dataset.failed = '1';
+    if (!e.target.src.includes('hero.jpg')) {
+      e.target.src = '/img/hero.jpg';
+    }
+  }
+}, true);
+
 /* ---------- helpers ---------- */
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -99,7 +109,10 @@ const slugFor = (name, fallbackSlug) => {
   const match = DESTS.find(d => d.slug === n || d.name.toLowerCase() === n);
   return match ? match.slug : 'generic';
 };
-const img = slug => `/img/dest/${encodeURIComponent(slug || 'generic')}?v=4`;
+const img = slug => {
+  const s = String(slug || 'generic').trim().toLowerCase().replace(/\.(jpg|jpeg|png|webp)$/i, '');
+  return `/img/dest/${encodeURIComponent(s)}.jpg?v=5`;
+};
 const mapLink = q => 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(q);
 const googleIconSvg = `<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" style="flex-shrink:0"><path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.65v3.03h3.88c2.27-2.09 3.66-5.17 3.66-9.12z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.03c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.28v3.13C3.27 21.36 7.34 24 12 24z"/><path fill="#FBBC05" d="M5.28 14.29c-.25-.72-.38-1.49-.38-2.29s.13-1.57.38-2.29V6.58H1.28C.46 8.2 0 10.04 0 12s.46 3.8 1.28 5.42l4-3.13z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.27 2.64 1.28 6.58l4 3.13c.95-2.83 3.6-4.96 6.72-4.96z"/></svg>`;
 const planHash = (p) => {
@@ -850,7 +863,7 @@ function authPage(initialMode = 'login', qs = new URLSearchParams()) {
   <div class="wrap page">
     <div class="auth-wrap">
       <div class="auth-hero">
-        <img src="/img/hero" alt="Mountain travel">
+        <img src="/img/hero.jpg" alt="Mountain travel">
         <div class="inner">
           <span class="ai-badge">${ic('sparkle')} CodeFusionAI Powered</span>
           <h2>Your Dream Trips, Synced Everywhere.</h2>
@@ -1193,19 +1206,25 @@ async function boot() {
   initAppleCards();
   try {
     const [destRes, healthRes, meRes, authCfg] = await Promise.all([
-      api('/api/destinations'),
+      api('/api/destinations').catch(() => api('/destinations.json')),
       api('/api/health').catch(() => ({ ai: false, model: 'CodeFusionAI' })),
       api('/api/auth/me').catch(() => ({ user: null })),
       api('/api/auth/config').catch(() => ({ googleClientId: '' }))
     ]);
-    DESTS = destRes.destinations;
+    DESTS = destRes.destinations || [];
     HEALTH = healthRes;
     USER = meRes.user || null;
     GOOGLE_CLIENT_ID = authCfg.googleClientId || '';
     renderShell();
-  } catch {
-    $('#view').innerHTML = '<div class="wrap page"><div class="banner err">Could not connect to the Python backend. Start it with <code>.venv/bin/python server.py</code> and open <b>http://localhost:8000</b>.</div></div>';
-    return;
+  } catch (err) {
+    console.warn('Backend notice:', err);
+    try {
+      const fallback = await api('/destinations.json');
+      DESTS = fallback.destinations || [];
+      renderShell();
+    } catch {
+      // Keep shell responsive
+    }
   }
   window.addEventListener('hashchange', route);
   route();

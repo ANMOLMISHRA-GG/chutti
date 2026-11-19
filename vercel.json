@@ -1,0 +1,20 @@
+{
+  "version": 2,
+  "cleanUrls": true,
+  "rewrites": [
+    { "source": "/img/hero", "destination": "/img/hero.jpg" },
+    { "source": "/img/dest/:slug([^.]+)", "destination": "/img/dest/:slug.jpg" },
+    { "source": "/api/:path*", "destination": "/api/index.py" }
+  ],
+  "headers": [
+    {
+      "source": "/img/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    }
+  ]
+}

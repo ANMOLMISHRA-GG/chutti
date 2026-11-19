@@ -6,8 +6,12 @@ from contextlib import contextmanager
 from datetime import datetime, timezone
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DATA_DIR = os.path.join(BASE_DIR, "data")
-DB_PATH = os.path.join(DATA_DIR, "chutti.db")
+if os.environ.get("VERCEL"):
+    DATA_DIR = "/tmp/data"
+    DB_PATH = "/tmp/data/chutti.db"
+else:
+    DATA_DIR = os.environ.get("CHUTTI_DATA_DIR") or os.path.join(BASE_DIR, "data")
+    DB_PATH = os.environ.get("CHUTTI_DB_PATH") or os.path.join(DATA_DIR, "chutti.db")
 
 
 def _utc_now() -> str:
