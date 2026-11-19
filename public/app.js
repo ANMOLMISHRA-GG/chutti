@@ -125,6 +125,179 @@ const planHash = (p) => {
   return '#/plan?' + q.toString();
 };
 
+/* ---------- Client-side Smart Plan Builder & Estimator Fallback ---------- */
+const STYLE_RATES = { budget: { hotel: 1, food: 1 }, comfort: { hotel: 1.6, food: 1.3 } };
+const round10 = n => Math.round(n / 10) * 10;
+const clampVal = (n, a, b) => Math.min(b, Math.max(a, n));
+
+function clientFindDest(name) {
+  const n = String(name || '').trim().toLowerCase();
+  if (!n) return null;
+  return (
+    DESTS.find(d => d.slug === n || d.name.toLowerCase() === n) ||
+    DESTS.find(d => (d.aliases || []).some(a => a.toLowerCase() === n)) ||
+    DESTS.find(d => n.includes(d.name.toLowerCase()) || (d.aliases || []).some(a => n.includes(a.toLowerCase()))) ||
+    null
+  );
+}
+
+function clientProfile(name) {
+  const d = clientFindDest(name);
+  if (d) return d;
+  return {
+    slug: 'generic', name: String(name || 'Your Destination').trim(),
+    state: 'India', scene: 'generic', tagline: 'Unforgettable adventures & scenic escapes',
+    bestTime: 'October to May', ideal: 4,
+    cost: { hotel: 1400, food: 450, local: 350, act: 500, reach: 1400 },
+    reachMode: 'Train / Bus / Flight', reachDuration: '10–14 hrs',
+    places: [
+      { name: 'City Center & Heritage Walk', desc: 'Explore the local sights, markets, and iconic architecture.' },
+      { name: 'Panoramic Viewpoint', desc: 'Breathtaking sunrise or sunset views overlooking the valley.' },
+      { name: 'Cultural Landmark & Museum', desc: 'Immerse in the vibrant history and local traditions.' },
+      { name: 'Nature Trail & Waterfalls', desc: 'Peaceful stroll through scenic natural landscapes.' },
+      { name: 'Evening Bazaar & Street Food', desc: 'Sample regional delicacies and pick up handcrafted souvenirs.' }
+    ],
+    foods: ['Regional Thali', 'Local street eats', 'Fresh herbal chai', 'Signature local dessert'],
+    tips: ['Book trains or buses in advance for the best rates.', 'Carry comfortable walking shoes.', 'Try local food joints recommended by residents.']
+  };
+}
+
+function clientCostFor(p, days, travelers, style) {
+  const s = STYLE_RATES[style] || STYLE_RATES.budget;
+  const nights = Math.max(days - 1, 0);
+  const rooms = Math.ceil(travelers / 2);
+  const hotel = round10(nights * (p.cost?.hotel || 1400) * rooms * s.hotel);
+  const food = round10(days * (p.cost?.food || 450) * travelers * s.food);
+  const reach = round10(travelers * (p.cost?.reach || 1200) * 2);
+  const local = round10(days * (p.cost?.local || 250) * rooms);
+  const activities = round10(days * (p.cost?.act || 500) * travelers);
+  return { hotel, food, travel: reach + local, reach, local, activities, total: hotel + food + reach + local + activities };
+}
+
+function clientFit(p, budget, travelers, wantedDays, wantedStyle) {
+  const maxDays = Math.max(p.ideal || 4, 3);
+  let style = wantedStyle === 'comfort' ? 'comfort' : 'budget';
+  let days;
+  if (wantedDays && Number(wantedDays) > 0) {
+    days = clampVal(Math.round(wantedDays), 1, 14);
+  } else {
+    days = 2;
+    for (let d = maxDays; d >= 2; d--) {
+      if (clientCostFor(p, d, travelers, 'budget').total <= budget * 0.97) { days = d; break; }
+    }
+  }
+  if (wantedStyle === 'auto' || !wantedStyle) {
+    style = clientCostFor(p, days, travelers, 'comfort').total <= budget * 0.97 && days >= Math.min(p.ideal || 4, 3) ? 'comfort' : 'budget';
+  }
+  return { days, style };
+}
+
+function clientEstimate(params) {
+  const p = clientProfile(params.destination);
+  const travelers = clampVal(parseInt(params.travelers, 10) || 1, 1, 10);
+  const budget = Math.max(parseInt(params.budget, 10) || 10000, 1000);
+  const { days, style } = clientFit(p, budget, travelers, params.days ? Number(params.days) : 0, params.style);
+  const c = clientCostFor(p, days, travelers, style);
+  return {
+    destination: p.name || params.destination,
+    slug: p.slug || 'generic',
+    known: !!p.slug,
+    days, nights: Math.max(days - 1, 0), travelers, style,
+    breakdown: { hotel: c.hotel, food: c.food, travel: c.travel, activities: c.activities },
+    parts: { reach: c.reach, local: c.local },
+    total: c.total,
+    leftover: Math.max(budget - c.total, 0),
+    withinBudget: c.total <= budget,
+    minimumBudget: clientCostFor(p, 2, travelers, 'budget').total,
+    mainTransport: p.reachMode || 'Train / Volvo Bus',
+    reachDuration: p.reachDuration || 'Overnight'
+  };
+}
+
+function clientBuildPlan(params, notice) {
+  const p = clientProfile(params.destination);
+  const e = clientEstimate(params);
+  const dest = e.destination || params.destination;
+  const hotelNight = Math.round((p.cost?.hotel || 1400) * (e.style === 'comfort' ? 1.6 : 1) / 10) * 10;
+  const places = (p.places && p.places.length) ? p.places : [
+    { name: 'City Center & Heritage Walk', desc: 'Explore the local sights, markets, and iconic architecture.' },
+    { name: 'Panoramic Viewpoint', desc: 'Breathtaking sunrise or sunset views overlooking the valley.' },
+    { name: 'Nature Trail & Waterfalls', desc: 'Peaceful stroll through scenic natural landscapes.' }
+  ];
+
+  let pi = 0;
+  const nextPlace = () => places[pi++ % places.length];
+  const itinerary = [];
+  for (let d = 1; d <= e.days; d++) {
+    const items = [];
+    if (d === 1) {
+      items.push({ time: 'Morning', title: `Travel to ${dest}`, detail: `${p.reachMode || 'Volvo Bus / Train'}, about ${p.reachDuration || 'overnight'}. Arrive, check in and freshen up.`, cost: 0 });
+      const a = nextPlace();
+      items.push({ time: 'Evening', title: a ? a.name : `Explore ${dest}`, detail: a ? a.desc : 'Short walk around your hotel, scenic sunset, and dinner at a local cafe.', cost: 0 });
+    } else if (d === e.days && e.days > 1) {
+      const a = nextPlace();
+      items.push({ time: 'Morning', title: a ? a.name : `Last look at ${dest}`, detail: a ? a.desc : 'Enjoy a relaxed breakfast, take final photos, and shop for local souvenirs.', cost: 0 });
+      items.push({ time: 'Afternoon', title: 'Check out & return journey', detail: `Head back toward ${params.origin || 'Delhi'} by ${p.reachMode || 'bus / train'}.`, cost: 0 });
+    } else {
+      const a = nextPlace(), b = nextPlace();
+      items.push({ time: 'Morning', title: a ? a.name : `Explore ${dest}`, detail: a ? a.desc : 'Visit the signature sights with an auto or local guide.', cost: 0 });
+      items.push({ time: 'Afternoon', title: b ? b.name : 'Local food walk', detail: b ? b.desc : 'Lunch at a well-reviewed spot, followed by scenic viewpoints.', cost: 0 });
+      items.push({ time: 'Evening', title: 'Sunset & Cafe Vibes', detail: 'Relax at a popular viewpoint and enjoy regional dinner.', cost: 0 });
+    }
+    itinerary.push({ day: d, title: d === 1 ? 'Arrival & First Sights' : (d === e.days && e.days > 1 ? 'Souvenirs & Departure' : `Explore ${dest}`), items });
+  }
+
+  const plan = {
+    source: 'estimate',
+    destination: dest,
+    slug: p.slug || 'generic',
+    title: `${dest} ${e.days}-Day Budget Journey`,
+    tagline: p.tagline || 'Crafted with CodeFusionAI',
+    summary: `A carefully balanced ${e.days}-day itinerary for ${e.travelers} ${e.travelers > 1 ? 'travellers' : 'traveller'} with stays, transport, food and day-by-day plans planned within ₹${Number(params.budget).toLocaleString('en-IN')}.`,
+    days: e.days,
+    nights: e.nights,
+    travelers: e.travelers,
+    origin: params.origin || 'Delhi',
+    budget: Number(params.budget) || e.total,
+    style: e.style,
+    when: params.when || 'Anytime',
+    breakdown: [
+      { key: 'hotel', label: `Hotel (${e.nights} ${e.nights === 1 ? 'Night' : 'Nights'})`, amount: e.breakdown.hotel, note: `₹${hotelNight.toLocaleString('en-IN')} per room per night` },
+      { key: 'food', label: 'Food & Dining', amount: e.breakdown.food, note: 'Local meals, street food & cafes' },
+      { key: 'travel', label: `Transport (${e.mainTransport})`, amount: e.breakdown.travel, note: 'Round trip transit + local autos' },
+      { key: 'activities', label: 'Activities & Entry', amount: e.breakdown.activities, note: 'Entry tickets and sightseeing' }
+    ],
+    total: e.total,
+    leftover: e.leftover,
+    withinBudget: e.withinBudget,
+    minimumBudget: e.minimumBudget,
+    transport: [{
+      mode: (p.reachMode || '').toLowerCase().includes('flight') ? 'flight' : (p.reachMode || '').toLowerCase().includes('train') ? 'train' : 'bus',
+      title: `${params.origin || 'Delhi'} → ${dest}`,
+      duration: p.reachDuration || 'Overnight',
+      cost: p.cost?.reach || 1200,
+      note: 'One way, per person. Live fares may vary.',
+      recommended: true
+    }],
+    hotels: [{
+      name: `${e.style === 'comfort' ? 'Premium 3-Star Stay' : 'Comfort Budget Hotel'} in ${dest}`,
+      area: 'Centrally located near main attractions',
+      type: e.style === 'comfort' ? '3-Star Hotel / Resort' : 'Boutique Hotel / Homestay',
+      pricePerNight: hotelNight,
+      note: 'Per room per night'
+    }],
+    food: (p.foods || []).slice(0, 4).map(f => ({ name: f, what: 'Local specialty', cost: Math.round((p.cost?.food || 450) / 3 / 10) * 10 })),
+    itinerary,
+    tips: p.tips || ['Book early for best rates', 'Carry cash for small local vendors', 'Check weather conditions before travel'],
+    packing: ['Comfortable walking shoes', 'Power bank & charger', 'Light jacket / weather essentials'],
+    bestTime: p.bestTime || 'October to May',
+    warnings: []
+  };
+  if (!e.withinBudget) plan.warnings.push(`This budget is tight. A basic 2-day trip typically starts around ₹${e.minimumBudget.toLocaleString('en-IN')}.`);
+  if (notice) plan.notice = notice;
+  return plan;
+}
+
 /* ---------- shell ---------- */
 function renderShell() {
   const theme = document.documentElement.getAttribute('data-theme') || 'light';
@@ -359,8 +532,13 @@ function home() {
     const d = dest.value.trim(), b = readBudget();
     if (!d || b < 1000) return;
     try {
-      const e = await api(`/api/estimate?destination=${encodeURIComponent(d)}&budget=${b}`);
-      if (!$('#sc-heading')) return;
+      let e = null;
+      try {
+        e = await api(`/api/estimate?destination=${encodeURIComponent(d)}&budget=${b}`);
+      } catch {
+        e = clientEstimate({ destination: d, budget: b });
+      }
+      if (!$('#sc-heading') || !e) return;
       const meta = DESTS.find(item => item.slug === e.slug) || {};
       $('#sc-img').src = img(e.slug || 'generic');
       $('#sc-cap').textContent = e.destination;
@@ -468,15 +646,27 @@ async function plan(qs) {
     let data = null;
     try { const c = sessionStorage.getItem(key); if (c) data = JSON.parse(c); } catch { /* ignore */ }
     if (!data) {
-      data = await post('/api/plan', p);
-      if (data.plan && data.plan.source === 'gemini') { try { sessionStorage.setItem(key, JSON.stringify(data)); } catch { /* ignore */ } }
+      try {
+        data = await post('/api/plan', p);
+        if (data.plan && data.plan.source === 'gemini') { try { sessionStorage.setItem(key, JSON.stringify(data)); } catch { /* ignore */ } }
+      } catch (apiErr) {
+        console.warn('API plan request returned an error, falling back to smart budget estimator:', apiErr);
+        const smartPlan = clientBuildPlan(p, 'CodeFusionAI Smart Budget Plan');
+        data = { plan: smartPlan };
+      }
     }
     if (token !== planToken) return;
     currentPlan = data.plan;
     renderPlan(data.plan, p);
   } catch (e) {
     if (token !== planToken) return;
-    $('#view').innerHTML = `<div class="wrap page"><div class="banner err">${ic('warn')}<div><b>Could not plan this trip.</b><br>${esc(e.message)}<br><br><a class="btn btn-red" href="${esc(planHash(p))}" onclick="location.reload()">Try again</a> <a class="btn btn-outline" href="#/">Back</a></div></div></div>`;
+    try {
+      const fallbackPlan = clientBuildPlan(p);
+      currentPlan = fallbackPlan;
+      renderPlan(fallbackPlan, p);
+    } catch {
+      $('#view').innerHTML = `<div class="wrap page"><div class="banner err">${ic('warn')}<div><b>Could not plan this trip.</b><br>${esc(e.message)}<br><br><a class="btn btn-red" href="${esc(planHash(p))}" onclick="location.reload()">Try again</a> <a class="btn btn-outline" href="#/">Back</a></div></div></div>`;
+    }
   } finally { clearInterval(timer); }
 }
 

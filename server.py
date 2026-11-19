@@ -342,6 +342,7 @@ def api_update_me(body: ProfileUpdateIn, user: dict = Depends(auth.get_current_u
 
 # ---------- Core Travel & Gemini AI Routes ----------
 @app.get("/api/health")
+@app.get("/health")
 def api_health():
     return {
         "ok": True,
@@ -352,17 +353,20 @@ def api_health():
 
 
 @app.get("/api/destinations")
+@app.get("/destinations")
 def api_destinations():
     return {"destinations": [_public_dest(d) for d in DESTINATIONS]}
 
 
 @app.get("/api/estimate")
+@app.get("/estimate")
 def api_estimate(destination: str = "", budget: str = "", days: str = "", travelers: str = "1"):
     params = _parse_plan_params(destination, budget, days=days, travelers=travelers)
     return estimate(params)
 
 
 @app.post("/api/plan")
+@app.post("/plan")
 def api_plan(body: PlanRequestIn, req: Request):
     params = _parse_plan_params(
         body.destination, body.budget, body.days, body.travelers, body.origin, body.style, body.when
@@ -398,6 +402,7 @@ def api_plan(body: PlanRequestIn, req: Request):
 
 
 @app.post("/api/plan/modify")
+@app.post("/plan/modify")
 def api_modify_plan(body: ModifyPlanIn, req: Request):
     instruction = _clean_text(body.instruction, 300)
     if len(instruction) < 3:
@@ -413,6 +418,7 @@ def api_modify_plan(body: ModifyPlanIn, req: Request):
 
 
 @app.post("/api/ask")
+@app.post("/ask")
 def api_ask(body: AskIn, req: Request):
     dest = _clean_text(body.destination, 60)
     q = _clean_text(body.question, 300)

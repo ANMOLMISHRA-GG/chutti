@@ -4,7 +4,7 @@
   "rewrites": [
     { "source": "/img/hero", "destination": "/img/hero.jpg" },
     { "source": "/img/dest/:slug([^.]+)", "destination": "/img/dest/:slug.jpg" },
-    { "source": "/api/:path*", "destination": "/api/index.py" }
+    { "source": "/api/(.*)", "destination": "/api/index.py" }
   ],
   "headers": [
     {
