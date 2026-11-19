@@ -31,11 +31,11 @@ def _model_candidates() -> list[str]:
 
 
 def is_configured() -> bool:
-    return bool((os.getenv("GEMINI_API_KEY") or "").strip())
+    return bool((os.getenv("GEMINI_API_KEY") or "").strip().rstrip("."))
 
 
 def _get_client() -> genai.Client:
-    key = (os.getenv("GEMINI_API_KEY") or "").strip()
+    key = (os.getenv("GEMINI_API_KEY") or "").strip().rstrip(".")
     if not key:
         raise RuntimeError("GEMINI_API_KEY is not set")
     return genai.Client(
