@@ -1,0 +1,24 @@
+# Secrets & Environment
+.env
+data/.jwt_secret
+
+# Runtime Databases
+data/
+database.db
+*.db
+*.sqlite3
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Node (legacy / optional)
+node_modules/
+
+# OS & Editors
+.DS_Store
+.vscode/
+.idea/
+
