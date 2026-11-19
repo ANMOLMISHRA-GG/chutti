@@ -115,6 +115,15 @@ const img = slug => {
 };
 const mapLink = q => 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(q);
 const googleIconSvg = `<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" style="flex-shrink:0"><path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.65v3.03h3.88c2.27-2.09 3.66-5.17 3.66-9.12z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.03c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.28v3.13C3.27 21.36 7.34 24 12 24z"/><path fill="#FBBC05" d="M5.28 14.29c-.25-.72-.38-1.49-.38-2.29s.13-1.57.38-2.29V6.58H1.28C.46 8.2 0 10.04 0 12s.46 3.8 1.28 5.42l4-3.13z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.27 2.64 1.28 6.58l4 3.13c.95-2.83 3.6-4.96 6.72-4.96z"/></svg>`;
+function navigate(hash) {
+  if (location.hash === hash) return;
+  const url = new URL(location.href);
+  url.hash = hash;
+  // Route fragments describe app views, not scroll targets in the document.
+  history.pushState(null, '', url.href);
+  route();
+}
+
 const planHash = (p) => {
   const q = new URLSearchParams({ d: p.destination, b: p.budget });
   if (p.days) q.set('days', p.days);
@@ -554,7 +563,7 @@ function home() {
     if (b < 1000) { err.textContent = 'Budget must be at least ₹1,000.'; budget.focus(); return; }
     if (b > 10000000) { err.textContent = 'Enter a budget of ₹1 crore or less.'; budget.focus(); return; }
     store.set('chutti_last', { destination: d, budget: b, when: w });
-    location.hash = planHash({ destination: d, budget: b, origin: from, when: w });
+    navigate(planHash({ destination: d, budget: b, origin: from, when: w }));
   };
   $('#plan-form').addEventListener('submit', e => { e.preventDefault(); go(); });
   $('#sc-open').addEventListener('click', go);
@@ -626,7 +635,7 @@ async function plan(qs) {
     style: qs.get('style') || 'auto',
     when: qs.get('when') || 'Anytime'
   };
-  if (!p.destination || p.budget < 1000) { location.hash = '#/'; return; }
+  if (!p.destination || p.budget < 1000) { navigate('#/'); return; }
   const token = ++planToken;
 
   $('#view').innerHTML = `<div class="loader"><div><div class="spin"></div><h2>Planning your ${esc(p.destination)} trip</h2><p id="lm">${LOAD_MSGS[0]}</p></div></div>`;
@@ -758,7 +767,7 @@ function renderPlan(pl, p) {
       when: p.when || 'Anytime'
     };
     store.set('chutti_origin', np.origin);
-    location.hash = planHash(np);
+    navigate(planHash(np));
   };
 
   $('#mod-form').addEventListener('submit', async e => {
@@ -796,7 +805,7 @@ function renderPlan(pl, p) {
   $('#book-btn').onclick = () => {
     if (!USER) {
       toast('Please log in to book this trip');
-      location.hash = '#/login?next=' + encodeURIComponent(location.hash);
+      navigate('#/login?next=' + encodeURIComponent(location.hash));
       return;
     }
     openBookingModal(pl);
@@ -836,7 +845,7 @@ function openBookingModal(pl) {
       const res = await post('/api/bookings', { plan: pl, travelDate: fd.travelDate, contactPhone: fd.contactPhone, notes: fd.notes });
       close();
       toast(`Booking confirmed! Ref: ${res.booking.booking_ref}`);
-      location.hash = '#/trips';
+      navigate('#/trips');
     } catch (err) {
       $('#bm-err').textContent = err.message;
       btn.disabled = false; btn.textContent = 'Confirm Trip Booking';
@@ -892,7 +901,7 @@ function destinations() {
 
 function destination(slug) {
   const d = bySlug(slug);
-  if (!d) { location.hash = '#/destinations'; return; }
+  if (!d) { navigate('#/destinations'); return; }
   document.title = `${d.name} · Chutti.com`;
   let prevInteractionId = null;
 
@@ -932,7 +941,7 @@ function destination(slug) {
     e.preventDefault();
     const b = parseInt(String($('#d-b').value).replace(/[^0-9]/g, ''), 10) || 0;
     if (b < 1000) { $('#d-err').textContent = 'Budget must be at least ₹1,000.'; return; }
-    location.hash = planHash({ destination: d.name, budget: b, origin: USER?.home_city || store.get('chutti_origin', 'Delhi') });
+    navigate(planHash({ destination: d.name, budget: b, origin: USER?.home_city || store.get('chutti_origin', 'Delhi') }));
   });
   $('#ask-form').addEventListener('submit', async e => {
     e.preventDefault();
@@ -1037,7 +1046,7 @@ function showGoogleAccountChooser(onSuccess) {
 
 /* ---------- LOGIN / SIGNUP PAGE ---------- */
 function authPage(initialMode = 'login', qs = new URLSearchParams()) {
-  if (USER) { location.hash = '#/trips'; return; }
+  if (USER) { navigate('#/trips'); return; }
   const nextHash = qs.get('next') || '#/trips';
   let mode = initialMode;
 
@@ -1087,7 +1096,7 @@ function authPage(initialMode = 'login', qs = new URLSearchParams()) {
     store.set('chutti_origin', USER.home_city || 'Delhi');
     renderShell();
     toast(`Welcome, ${USER.name.split(' ')[0]}!`);
-    location.hash = nextHash.startsWith('#/') ? nextHash : '#/trips';
+    navigate(nextHash.startsWith('#/') ? nextHash : '#/trips');
   };
 
   const setMode = m => {
@@ -1238,7 +1247,7 @@ async function trips() {
       store.del('chutti_token');
       renderShell();
       toast('Logged out');
-      location.hash = '#/';
+      navigate('#/');
     };
     $$('[data-del]').forEach(b => b.onclick = async () => {
       try { await del(`/api/trips/${b.dataset.del}`); toast('Trip deleted'); trips(); }
@@ -1364,7 +1373,7 @@ function route() {
   const page = parts[0] || 'home';
   document.body.classList.toggle('is-home', page === 'home' || !['destinations', 'destination', 'plan', 'trips', 'about', 'contact', 'login', 'signup'].includes(page));
   $$('#nav-links a').forEach(a => a.classList.toggle('active', a.dataset.nav === (page === 'destination' ? 'destinations' : page === 'plan' ? '' : page)));
-  if (page === 'planner') { location.hash = '#/'; return; }
+  if (page === 'planner') { navigate('#/'); return; }
   window.scrollTo(0, 0);
   switch (page) {
     case 'destinations': return destinations();
