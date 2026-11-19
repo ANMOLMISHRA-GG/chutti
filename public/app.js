@@ -115,6 +115,15 @@ const img = slug => {
 };
 const mapLink = q => 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(q);
 const googleIconSvg = `<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" style="flex-shrink:0"><path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.65v3.03h3.88c2.27-2.09 3.66-5.17 3.66-9.12z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.03c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.28v3.13C3.27 21.36 7.34 24 12 24z"/><path fill="#FBBC05" d="M5.28 14.29c-.25-.72-.38-1.49-.38-2.29s.13-1.57.38-2.29V6.58H1.28C.46 8.2 0 10.04 0 12s.46 3.8 1.28 5.42l4-3.13z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.27 2.64 1.28 6.58l4 3.13c.95-2.83 3.6-4.96 6.72-4.96z"/></svg>`;
+function navigate(hash) {
+  if (location.hash === hash) return;
+  const url = new URL(location.href);
+  url.hash = hash;
+  // Route fragments describe app views, not scroll targets in the document.
+  history.pushState(null, '', url.href);
+  route();
+}
+
 const planHash = (p) => {
   const q = new URLSearchParams({ d: p.destination, b: p.budget });
   if (p.days) q.set('days', p.days);
@@ -311,9 +320,9 @@ function renderShell() {
 
   $('#app-header').innerHTML = `
   <nav class="nav">
-    <a class="logo" href="#/" aria-label="Chutti.com home">${logoPlane}<span><b>chutti<em>.com</em></b></span></a>
+    <a class="logo" href="#/" aria-label="Chutti.com home"><span class="brand-icon">${ic('mountain')}</span><span class="inner-wordmark"><b>chutti<em>.</em></b></span><span class="home-wordmark"><b>TripPlanner</b></span></a>
     <div class="nav-links" id="nav-links">
-      <a href="#/" data-nav="home">Explore</a>
+      <a href="#/" data-nav="home">Explore</a><button class="home-plan-link" type="button" onclick="document.getElementById('start-btn')?.click()">Plan</button>
       <a href="#/destinations" data-nav="destinations">Destinations</a>
       <a href="#/trips" data-nav="trips">My Trips</a>
       <a href="#/about" data-nav="about">About</a>
@@ -329,10 +338,7 @@ function renderShell() {
   <div class="foot">
     <a class="logo" href="#/">${logoPlane}<span><b>chutti<em>.com</em></b><small>Travel Smarter, Live Better</small></span></a>
     <div class="links"><a href="#/">Home</a><a href="#/destinations">Destinations</a><a href="#/trips">My Trips</a><a href="#/about">About</a><a href="#/contact">Contact</a></div>
-    <div class="soc">
-      <a href="#/about" aria-label="YouTube">${ic('youtube')}</a><a href="#/about" aria-label="Instagram">${ic('insta')}</a>
-      <a href="#/about" aria-label="X">${ic('x')}</a><a href="#/about" aria-label="LinkedIn">${ic('linkedin')}</a>
-    </div>
+
     <div class="script">Your Next Adventure<br>is Just a <em>Click Away!</em></div>
   </div>`;
   $('#theme-btn').onclick = () => {
@@ -382,15 +388,11 @@ function home() {
     <div class="hero-bg"></div>
     <div class="wrap hero-inner">
       <h1>Plan Your Dream Trip<br><span class="hero-accent">Effortlessly.</span></h1>
-      <p class="hero-sub">Tell us where you want to go and your budget...<br>we'll plan the <b>perfect trip</b> with flights, trains, hotels,<br>food and more — all within your budget!</p>
-      <div class="hero-actions">
-        <a class="btn btn-red" id="start-btn" href="#planner">Start Planning ${ic('arrow')}</a>
-        <button class="demo-btn" id="demo-btn" type="button"><span class="play-ring">${ic('play')}</span><span>Watch Demo</span></button>
-      </div>
+      <p class="hero-sub">Tell us where you want to go and your budget...<br>we’ll plan the <b>perfect trip</b> with flights, trains, hotels,<br>food and more — all within your budget!</p>
+      <div class="hero-actions"><button class="btn btn-red" id="start-btn">Start Planning ${ic('arrow')}</button><button class="demo-btn" id="demo-btn"><span class="play-ring">${ic('play')}</span>Watch Demo</button></div>
     </div>
   </section>
-
-  <section class="wrap search-pill-wrap">
+  <section class="wrap search-pill-wrap" aria-label="Trip planner">
     <form class="search-pill" id="plan-form" novalidate>
       <div class="sp-seg sp-dest" id="planner">
         <span class="sp-ic">${ic('pin')}</span>
@@ -426,22 +428,12 @@ function home() {
       <button class="btn btn-red sp-submit" id="go" type="submit">Plan My Trip ${ic('arrow')}</button>
     </form>
     <div class="form-err sp-err" id="form-err" role="alert"></div>
-
-    <div class="feature-pills">
-      <div class="feat-pill"><span class="fp-ic">${ic('plane')}</span><div><b>Flights &amp; Trains</b><small>Options</small></div></div>
-      <div class="feat-pill"><span class="fp-ic">${ic('bed')}</span><div><b>Hotels</b><small>Within Budget</small></div></div>
-      <div class="feat-pill"><span class="fp-ic">${ic('food')}</span><div><b>Food &amp; Local Eats</b><small>Suggestions</small></div></div>
-      <div class="feat-pill"><span class="fp-ic">${ic('pin')}</span><div><b>Complete Itinerary</b><small>Day-wise Plan</small></div></div>
-      <div class="feat-pill"><span class="fp-ic">${ic('wallet')}</span><div><b>Total Cost Breakdown</b><small>(No Hidden Charges)</small></div></div>
-    </div>
+    <div class="feature-pills">${[['plane','Flights &amp; Trains','Options'],['bed','Hotels','Within Budget'],['food','Food &amp; Local Eats','Suggestions'],['pin','Complete Itinerary','Day-wise Plan'],['wallet','Total Cost Breakdown','(No Hidden Charges)']].map(([icon,title,detail]) => `<div class="feat-pill"><span class="fp-ic">${ic(icon)}</span><div><b>${title}</b><small>${detail}</small></div></div>`).join('')}</div>
   </section>
 
   <section class="wrap popular">
     <div class="eyebrow"><span>EXPLORE</span><i></i></div>
-    <div class="sec-head">
-      <h2>Popular Destinations</h2>
-      <a class="view-all-link" href="#/destinations">View All Destinations ${ic('arrow')}</a>
-    </div>
+    <div class="sec-head"><h2>Popular Destinations</h2><a class="view-all-link" href="#/destinations">View All Destinations ${ic('arrow')}</a></div>
     <div class="grid grid-6">${popularSix.map(dcard).join('')}</div>
   </section>
 
@@ -454,7 +446,7 @@ function home() {
           <div>
             <div class="bento-meta-pills">
               <span class="bm-pill">${ic('pin')} <span id="sc-loc">${esc(initialDestObj.name)}, ${esc(initialDestObj.state || 'India')}</span></span>
-              <span class="bm-pill">${ic('cloud')} <span id="sc-temp">${initTemp}</span></span>
+
             </div>
             <div class="bento-script" id="sc-cap">${esc(initialDestObj.name)}</div>
             <div class="bento-sub-cap">Because you deserve a break!</div>
@@ -500,7 +492,7 @@ function home() {
             <span style="background:linear-gradient(135deg,#3b82f6,#6366f1)">R</span>
             <span style="background:linear-gradient(135deg,#10b981,#0d9488)">P</span>
           </div>
-          <span>Powered by CodeFusionAI</span>
+          <span>Planning estimate, not a live quote</span>
         </div>
       </div>
     </div>
@@ -523,7 +515,10 @@ function home() {
 
   const budget = $('#budget'), dest = $('#dest'), when = $('#when'), err = $('#form-err');
   when.value = saved.when || 'Anytime';
-  const readBudget = () => parseInt(String(budget.value).replace(/[^0-9]/g, ''), 10) || 0;
+  const readBudget = () => {
+    const amount = budget.value.trim().replace(/^₹\s*/, '').replaceAll(',', '');
+    return /^\d+$/.test(amount) ? Number(amount) : 0;
+  };
   budget.addEventListener('input', () => refresh());
   budget.addEventListener('blur', () => { const v = readBudget(); if (v) budget.value = v; });
   dest.addEventListener('input', () => refresh());
@@ -544,7 +539,7 @@ function home() {
       $('#sc-cap').textContent = e.destination;
       $('#sc-heading').textContent = e.destination;
       $('#sc-loc').textContent = meta.state ? `${e.destination}, ${meta.state}` : e.destination;
-      $('#sc-temp').textContent = DEST_TEMPS[e.slug] || '20°C';
+
       $('#sc-desc').textContent = meta.blurb ? meta.blurb.split('.')[0] + '.' : `${meta.tagline || 'Handpicked stays, local food and curated day-by-day plans.'}`;
       $('#sc-tot').textContent = inr(e.total).replace('₹', '₹ ');
       $('#sc-days').textContent = `(for ${e.days} Days / ${e.nights} ${e.nights === 1 ? 'Night' : 'Nights'})`;
@@ -562,20 +557,18 @@ function home() {
     err.textContent = '';
     if (!d) { err.textContent = 'Please enter a destination.'; dest.focus(); return; }
     if (b < 1000) { err.textContent = 'Budget must be at least ₹1,000.'; budget.focus(); return; }
+    if (b > 10000000) { err.textContent = 'Enter a budget of ₹1 crore or less.'; budget.focus(); return; }
     store.set('chutti_last', { destination: d, budget: b, when: w });
-    location.hash = planHash({ destination: d, budget: b, origin: from, when: w });
+    navigate(planHash({ destination: d, budget: b, origin: from, when: w }));
   };
   $('#plan-form').addEventListener('submit', e => { e.preventDefault(); go(); });
   $('#sc-open').addEventListener('click', go);
   $('#sc-play').addEventListener('click', go);
-  $('#start-btn').addEventListener('click', e => {
-    e.preventDefault();
-    $('#plan-form').scrollIntoView({ behavior: 'smooth', block: 'center' });
-    setTimeout(() => dest.focus({ preventScroll: true }), 350);
-  });
-  $('#demo-btn').addEventListener('click', () => {
-    openDemoModal(defaultOrigin || 'Delhi');
-  });
+  $('#start-btn').onclick = () => {
+    dest.focus({ preventScroll: true });
+    $('#plan-form').scrollIntoView({ block: 'center', behavior: 'smooth' });
+  };
+  $('#demo-btn').onclick = () => openDemoModal(defaultOrigin);
   $$('[data-quick]').forEach(btn => btn.addEventListener('click', () => {
     const qName = btn.dataset.quick;
     const qSlug = btn.dataset.slug || slugFor(qName);
@@ -634,7 +627,7 @@ async function plan(qs) {
     style: qs.get('style') || 'auto',
     when: qs.get('when') || 'Anytime'
   };
-  if (!p.destination || p.budget < 1000) { location.hash = '#/'; return; }
+  if (!p.destination || p.budget < 1000) { navigate('#/'); return; }
   const token = ++planToken;
 
   $('#view').innerHTML = `<div class="loader"><div><div class="spin"></div><h2>Planning your ${esc(p.destination)} trip</h2><p id="lm">${LOAD_MSGS[0]}</p></div></div>`;
@@ -766,7 +759,7 @@ function renderPlan(pl, p) {
       when: p.when || 'Anytime'
     };
     store.set('chutti_origin', np.origin);
-    location.hash = planHash(np);
+    navigate(planHash(np));
   };
 
   $('#mod-form').addEventListener('submit', async e => {
@@ -804,7 +797,7 @@ function renderPlan(pl, p) {
   $('#book-btn').onclick = () => {
     if (!USER) {
       toast('Please log in to book this trip');
-      location.hash = '#/login?next=' + encodeURIComponent(location.hash);
+      navigate('#/login?next=' + encodeURIComponent(location.hash));
       return;
     }
     openBookingModal(pl);
@@ -844,7 +837,7 @@ function openBookingModal(pl) {
       const res = await post('/api/bookings', { plan: pl, travelDate: fd.travelDate, contactPhone: fd.contactPhone, notes: fd.notes });
       close();
       toast(`Booking confirmed! Ref: ${res.booking.booking_ref}`);
-      location.hash = '#/trips';
+      navigate('#/trips');
     } catch (err) {
       $('#bm-err').textContent = err.message;
       btn.disabled = false; btn.textContent = 'Confirm Trip Booking';
@@ -900,7 +893,7 @@ function destinations() {
 
 function destination(slug) {
   const d = bySlug(slug);
-  if (!d) { location.hash = '#/destinations'; return; }
+  if (!d) { navigate('#/destinations'); return; }
   document.title = `${d.name} · Chutti.com`;
   let prevInteractionId = null;
 
@@ -940,7 +933,7 @@ function destination(slug) {
     e.preventDefault();
     const b = parseInt(String($('#d-b').value).replace(/[^0-9]/g, ''), 10) || 0;
     if (b < 1000) { $('#d-err').textContent = 'Budget must be at least ₹1,000.'; return; }
-    location.hash = planHash({ destination: d.name, budget: b, origin: USER?.home_city || store.get('chutti_origin', 'Delhi') });
+    navigate(planHash({ destination: d.name, budget: b, origin: USER?.home_city || store.get('chutti_origin', 'Delhi') }));
   });
   $('#ask-form').addEventListener('submit', async e => {
     e.preventDefault();
@@ -1045,7 +1038,7 @@ function showGoogleAccountChooser(onSuccess) {
 
 /* ---------- LOGIN / SIGNUP PAGE ---------- */
 function authPage(initialMode = 'login', qs = new URLSearchParams()) {
-  if (USER) { location.hash = '#/trips'; return; }
+  if (USER) { navigate('#/trips'); return; }
   const nextHash = qs.get('next') || '#/trips';
   let mode = initialMode;
 
@@ -1095,7 +1088,7 @@ function authPage(initialMode = 'login', qs = new URLSearchParams()) {
     store.set('chutti_origin', USER.home_city || 'Delhi');
     renderShell();
     toast(`Welcome, ${USER.name.split(' ')[0]}!`);
-    location.hash = nextHash.startsWith('#/') ? nextHash : '#/trips';
+    navigate(nextHash.startsWith('#/') ? nextHash : '#/trips');
   };
 
   const setMode = m => {
@@ -1246,7 +1239,7 @@ async function trips() {
       store.del('chutti_token');
       renderShell();
       toast('Logged out');
-      location.hash = '#/';
+      navigate('#/');
     };
     $$('[data-del]').forEach(b => b.onclick = async () => {
       try { await del(`/api/trips/${b.dataset.del}`); toast('Trip deleted'); trips(); }
@@ -1368,11 +1361,11 @@ function route() {
   const parts = path.split('/').filter(Boolean);
   const qs = new URLSearchParams(q || '');
   planToken++;
-  document.title = 'Chutti.com | You give the budget. We plan the entire journey.';
+  document.title = 'Chutti — The India Travel Planner';
   const page = parts[0] || 'home';
   document.body.classList.toggle('is-home', page === 'home' || !['destinations', 'destination', 'plan', 'trips', 'about', 'contact', 'login', 'signup'].includes(page));
   $$('#nav-links a').forEach(a => a.classList.toggle('active', a.dataset.nav === (page === 'destination' ? 'destinations' : page === 'plan' ? '' : page)));
-  if (page === 'planner') { location.hash = '#/'; return; }
+  if (page === 'planner') { navigate('#/'); return; }
   window.scrollTo(0, 0);
   switch (page) {
     case 'destinations': return destinations();
